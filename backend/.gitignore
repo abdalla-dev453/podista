@@ -7,3 +7,10 @@ env/
 **/__pycache__/
 *.pyc
 *.pyo
+# Ignore venv in root or any subfolder (like backend/venv)
+**/venv/
+**/.venv/
+
+# Python cache files
+**/__pycache__/
+*.pyc
