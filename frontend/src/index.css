@@ -1,111 +1,106 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  --color-base-bg: #0a0a0f;
+  --color-base-panel: #121218;
+  --color-base-card: #191922;
+  --color-base-border: #26262f;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-brand: #8b5cf6;
+  --color-brand-light: #a78bfa;
+  --color-brand-dark: #6d28d9;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
+  --color-accent-teal: #2dd4bf;
+  --color-accent-rose: #fb7185;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --font-sans: "Inter", "system-ui", "sans-serif";
 }
 
 body {
-  margin: 0;
+  background-color: var(--color-base-bg);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  background-color: var(--color-base-bg);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    min-height: 720px;
+    border-radius: 1rem;
+    border: 1px solid var(--color-base-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.sidebar-link {
   display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
+.sidebar-link:hover {
+  background-color: var(--color-base-card);
+  color: #ffffff;
+}
+
+.sidebar-link.active {
+  background-color: var(--color-base-card);
+  color: #ffffff;
+  border: 1px dashed rgba(139, 92, 246, 0.6);
+}
+
+.stat-card {
+  background-color: var(--color-base-card);
+  border: 1px solid var(--color-base-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.btn-primary {
+  background-color: var(--color-brand);
+  color: #ffffff;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-h);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.15s ease;
+  cursor: pointer;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.btn-primary:hover {
+  background-color: var(--color-brand-dark);
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.btn-ghost {
+  background-color: var(--color-base-panel);
+  border: 1px solid var(--color-base-border);
+  color: #ffffff;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.btn-ghost:hover {
+  border-color: #6b7280;
 }
