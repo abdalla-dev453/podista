@@ -21,7 +21,17 @@ def create_app(config_class=Config):
     from app.routes.messages import messages_bp
     from app.routes.admin import admin_bp
     from app.routes.users import users_bp
+    from app.routes.episodes import episodes_bp
+    from app.routes.bookmarks import bookmarks_bp
+    from app.routes.search import search_bp
+    from app.routes.notifications import notifications_bp
+    from app.routes.uploads import uploads_bp
 
+    app.register_blueprint(episodes_bp, url_prefix="/api/episodes")
+    app.register_blueprint(bookmarks_bp, url_prefix="/api/bookmarks")
+    app.register_blueprint(search_bp, url_prefix="/api/search")
+    app.register_blueprint(uploads_bp, url_prefix="/api/uploads")
+    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(channels_bp, url_prefix="/api/channels")
     app.register_blueprint(messages_bp, url_prefix="/api/messages")
