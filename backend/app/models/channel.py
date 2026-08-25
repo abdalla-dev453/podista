@@ -1,6 +1,7 @@
 import secrets
 from datetime import datetime, timezone
 from app.extensions import db
+from app.models import episode
 
 
 class Channel(db.Model):
@@ -24,6 +25,7 @@ class Channel(db.Model):
     )
     messages = db.relationship("Message", back_populates="channel", cascade="all, delete-orphan")
     reports = db.relationship("Report", back_populates="channel", cascade="all, delete-orphan")
+    episodes = db.relationship("Episode", back_populates="channel", cascade="all, delete-orphan")
 
     def to_dict(self, member_count=None):
         return {
