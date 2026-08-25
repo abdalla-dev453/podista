@@ -14,7 +14,7 @@ def create_app(config_class=Config):
     cors.init_app(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
     socketio.init_app(app)
 
-    from app.models import user, channel, membership, message, invitation, report, ban  # noqa
+    from app.models import user, channel, membership, message, invitation, report, ban, notification, follow, reaction, bookmark, episode
 
     from app.routes.auth import auth_bp
     from app.routes.channels import channels_bp
