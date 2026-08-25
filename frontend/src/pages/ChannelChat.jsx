@@ -1,14 +1,21 @@
-import { Mic, Pin, Radio, Send, ShieldAlert, UserPlus, X } from "lucide-react";
+import { Mic, Mic2, MessageSquare, Pin, Plus, Radio, Send, ShieldAlert, UserPlus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { getChannel, toggleLiveChannel } from "../api/channels";
-import { getMessages, sendMessage } from "../api/messages";
+import { getMessages, sendMessage, toggleReaction } from "../api/messages";
+import { getChannelEpisodes, deleteEpisode, playEpisode } from "../api/episodes";
+import { getBookmarks, addBookmark, removeBookmark } from "../api/bookmarks";
 import AudioPlayerBar from "../components/AudioPlayerBar.jsx";
+import EpisodeCard from "../components/EpisodeCard.jsx";
+import PublishEpisodeModal from "../components/PublishEpisodeModal.jsx";
 import InviteUserModal from "../components/InviteUserModal.jsx";
 import ReportModal from "../components/ReportModal.jsx";
+import NotificationBell from "../components/NotificationBell.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+
+const QUICK_REACTIONS = ["🔥", "😂", "👏", "❤️"];
 
 export default function ChannelChat() {
   const { channelId } = useParams();
@@ -20,8 +27,16 @@ export default function ChannelChat() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
   const [activeStream, setActiveStream] = useState(null);
+  const [tab, setTab] = useState("chat"); // 'chat' | 'episodes'
+  const [episodes, setEpisodes] = useState([]);
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [showPublish, setShowPublish] = useState(false);
+  const [playingEpisode, setPlayingEpisode] = useState(null);
   const socketRef = useRef(null);
   const chatBottomRef = useRef(null);
+  const audioRef = useRef(null);
+
+  const canManage = channel?.role === "owner" || channel?.role === "moderator";
 
   const scrollToBottom = () => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -31,26 +46,38 @@ export default function ChannelChat() {
     getChannel(channelId).then(setChannel).catch(console.error);
   };
 
+  const loadEpisodes = () => {
+    getChannelEpisodes(channelId).then(setEpisodes).catch(console.error);
+  };
+
   useEffect(() => {
     loadChannelInfo();
+    loadEpisodes();
     getMessages(channelId)
       .then((data) => {
         setMessages(data || []);
         setTimeout(scrollToBottom, 100);
       })
       .catch(console.error);
+    getBookmarks()
+      .then((saved) => setBookmarkedIds(new Set(saved.map((e) => e.id))))
+      .catch(() => {});
 
     const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
     const socket = io(socketUrl, { transports: ["websocket", "polling"] });
     socket.emit("join_channel", { channel_id: channelId });
+    if (user?.id) socket.emit("join_user_room", { user_id: user.id });
     socket.on("new_message", (msg) => {
       setMessages((prev) => [...prev, msg]);
       setTimeout(scrollToBottom, 100);
     });
+    socket.on("message_reaction", ({ message_id, reactions }) => {
+      setMessages((prev) => prev.map((m) => (m.id === message_id ? { ...m, reactions } : m)));
+    });
     socketRef.current = socket;
 
     return () => socket.disconnect();
-  }, [channelId]);
+  }, [channelId, user?.id]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -78,6 +105,15 @@ export default function ChannelChat() {
     }
   };
 
+  const handleReact = async (messageId, emoji) => {
+    try {
+      const { reactions } = await toggleReaction(messageId, emoji);
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions } : m)));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleToggleBroadcast = async () => {
     try {
       const updated = await toggleLiveChannel(channelId);
@@ -96,17 +132,62 @@ export default function ChannelChat() {
     }
   };
 
+  const handlePlayEpisode = (episode) => {
+    if (playingEpisode?.id === episode.id) {
+      if (audioRef.current?.paused) audioRef.current.play();
+      else audioRef.current?.pause();
+      return;
+    }
+    setPlayingEpisode(episode);
+    playEpisode(episode.id).catch(() => {});
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.src = episode.audio_url;
+        audioRef.current.play().catch(() => {});
+      }
+    }, 0);
+  };
+
+  const handleToggleBookmark = async (episode) => {
+    const isSaved = bookmarkedIds.has(episode.id);
+    try {
+      if (isSaved) {
+        await removeBookmark(episode.id);
+        setBookmarkedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(episode.id);
+          return next;
+        });
+      } else {
+        await addBookmark(episode.id);
+        setBookmarkedIds((prev) => new Set(prev).add(episode.id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteEpisode = async (episode) => {
+    if (!confirm(`Delete "${episode.title}"? This can't be undone.`)) return;
+    try {
+      await deleteEpisode(episode.id);
+      setEpisodes((prev) => prev.filter((e) => e.id !== episode.id));
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete episode");
+    }
+  };
+
   return (
     <div className="app-shell flex flex-col md:flex-row min-h-screen md:min-h-[720px] pb-16 relative">
       <Sidebar activeLabel="Home" onGoLive={handleToggleBroadcast} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-base-border">
-          <div>
-            <h2 className="font-semibold flex items-center gap-2">
+        <header className="flex items-center justify-between px-5 py-3 border-b border-base-border gap-3">
+          <div className="min-w-0">
+            <h2 className="font-semibold flex items-center gap-2 truncate">
               # {channel ? channel.name : `channel-${channelId}`}
               {channel?.is_live && (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
                   <Radio size={10} className="animate-pulse" /> LIVE
                 </span>
               )}
@@ -118,7 +199,7 @@ export default function ChannelChat() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {channel?.is_live && (
               <button
                 onClick={() =>
@@ -135,10 +216,11 @@ export default function ChannelChat() {
             )}
             <button
               onClick={() => setShowInviteModal(true)}
-              className="btn-ghost !py-1 !px-3 text-xs flex items-center gap-1"
+              className="btn-ghost !py-1 !px-3 text-xs hidden sm:flex items-center gap-1"
             >
-              <UserPlus size={14} /> Invite Members
+              <UserPlus size={14} /> Invite
             </button>
+            <NotificationBell socket={socketRef.current} />
             <Pin
               size={18}
               onClick={() => setShowDetails((s) => !s)}
@@ -147,94 +229,177 @@ export default function ChannelChat() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[560px]">
-          {messages.map((m) => {
-            const mine = m.author?.id === user?.id;
-            const isAudioAttachment =
-              m.attachment_url?.endsWith(".mp3") ||
-              m.attachment_url?.includes("audio") ||
-              m.body?.includes("🎙");
-
-            return (
-              <div
-                key={m.id}
-                className={`flex ${mine ? "justify-end" : ""} group`}
-              >
-                <div
-                  className={`max-w-[75%] ${mine ? "bg-brand text-white" : "bg-base-card border border-base-border"} rounded-2xl p-3 shadow-md`}
-                >
-                  <div className="flex items-center justify-between gap-4 mb-1">
-                    {!mine && (
-                      <p className="text-xs font-semibold text-brand-light">
-                        {m.author?.display_name || m.author?.username}
-                      </p>
-                    )}
-                    {!mine && (
-                      <button
-                        onClick={() => setReportTarget(m.author)}
-                        title="Report Member"
-                        className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-rose-400 transition-opacity flex items-center gap-1 ml-auto"
-                      >
-                        <ShieldAlert size={12} /> Report
-                      </button>
-                    )}
-                  </div>
-
-                  {m.body && (
-                    <p className="text-sm leading-relaxed">{m.body}</p>
-                  )}
-
-                  {m.attachment_url && (
-                    <div className="mt-2">
-                      {isAudioAttachment ? (
-                        <div className="bg-base-panel/80 p-2 rounded-xl border border-base-border">
-                          <audio controls className="w-full h-8 accent-brand">
-                            <source src={m.attachment_url} type="audio/mp3" />
-                            Your browser does not support audio elements.
-                          </audio>
-                        </div>
-                      ) : (
-                        <img
-                          src={m.attachment_url}
-                          alt="attachment"
-                          className="rounded-lg max-w-full"
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          <div ref={chatBottomRef} />
+        {/* Chat / Episodes tabs */}
+        <div className="flex items-center gap-4 px-5 pt-3 border-b border-base-border text-xs md:text-sm font-semibold">
+          <button
+            onClick={() => setTab("chat")}
+            className={`pb-3 flex items-center gap-1.5 transition-colors ${
+              tab === "chat" ? "border-b-2 border-brand text-white" : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <MessageSquare size={14} /> Live Chat
+          </button>
+          <button
+            onClick={() => setTab("episodes")}
+            className={`pb-3 flex items-center gap-1.5 transition-colors ${
+              tab === "episodes" ? "border-b-2 border-brand text-white" : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <Mic2 size={14} /> Episodes ({episodes.length})
+          </button>
+          {tab === "episodes" && canManage && (
+            <button
+              onClick={() => setShowPublish(true)}
+              className="ml-auto mb-2 btn-primary !py-1 !px-3 text-xs flex items-center gap-1"
+            >
+              <Plus size={12} /> Publish Episode
+            </button>
+          )}
         </div>
 
-        <form
-          onSubmit={handleSend}
-          className="p-4 border-t border-base-border flex items-center gap-3"
-        >
-          <button
-            type="button"
-            onClick={handleSendVoiceNote}
-            title="Send Audio Clip / Voice Note"
-            className="text-gray-400 hover:text-brand-light p-2 rounded-full hover:bg-base-panel transition-colors"
-          >
-            <Mic size={18} />
-          </button>
+        {tab === "chat" ? (
+          <>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[560px]">
+              {messages.map((m) => {
+                const mine = m.author?.id === user?.id;
+                const isAudioAttachment =
+                  m.attachment_url?.endsWith(".mp3") ||
+                  m.attachment_url?.includes("audio") ||
+                  m.body?.includes("🎙");
 
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Message #${channel?.name || `channel-${channelId}`}...`}
-            className="flex-1 bg-base-panel border border-base-border rounded-full px-4 py-2 text-sm text-white outline-none focus:border-brand"
-          />
-          <button
-            type="submit"
-            className="bg-brand hover:bg-brand-dark text-white rounded-full p-2.5 transition-colors cursor-pointer"
-          >
-            <Send size={16} />
-          </button>
-        </form>
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex ${mine ? "justify-end" : ""} group`}
+                  >
+                    <div
+                      className={`max-w-[75%] ${mine ? "bg-brand text-white" : "bg-base-card border border-base-border"} rounded-2xl p-3 shadow-md`}
+                    >
+                      <div className="flex items-center justify-between gap-4 mb-1">
+                        {!mine && (
+                          <p className="text-xs font-semibold text-brand-light">
+                            {m.author?.display_name || m.author?.username}
+                          </p>
+                        )}
+                        {!mine && (
+                          <button
+                            onClick={() => setReportTarget(m.author)}
+                            title="Report Member"
+                            className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-rose-400 transition-opacity flex items-center gap-1 ml-auto"
+                          >
+                            <ShieldAlert size={12} /> Report
+                          </button>
+                        )}
+                      </div>
+
+                      {m.body && (
+                        <p className="text-sm leading-relaxed">{m.body}</p>
+                      )}
+
+                      {m.attachment_url && (
+                        <div className="mt-2">
+                          {isAudioAttachment ? (
+                            <div className="bg-base-panel/80 p-2 rounded-xl border border-base-border">
+                              <audio controls className="w-full h-8 accent-brand">
+                                <source src={m.attachment_url} type="audio/mp3" />
+                                Your browser does not support audio elements.
+                              </audio>
+                            </div>
+                          ) : (
+                            <img
+                              src={m.attachment_url}
+                              alt="attachment"
+                              className="rounded-lg max-w-full"
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Reactions */}
+                      <div className="flex items-center gap-1 mt-2 flex-wrap">
+                        {(m.reactions || []).filter((r) => r.count > 0).map((r) => (
+                          <button
+                            key={r.emoji}
+                            onClick={() => handleReact(m.id, r.emoji)}
+                            className={`text-[11px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 transition-colors ${
+                              r.user_ids?.includes(user?.id)
+                                ? "bg-brand/30 border-brand/60"
+                                : "bg-base-panel/60 border-base-border"
+                            }`}
+                          >
+                            {r.emoji} {r.count}
+                          </button>
+                        ))}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          {QUICK_REACTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleReact(m.id, emoji)}
+                              className="text-xs px-1 py-0.5 rounded hover:bg-base-panel/60"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatBottomRef} />
+            </div>
+
+            <form
+              onSubmit={handleSend}
+              className="p-4 border-t border-base-border flex items-center gap-3"
+            >
+              <button
+                type="button"
+                onClick={handleSendVoiceNote}
+                title="Send Audio Clip / Voice Note"
+                className="text-gray-400 hover:text-brand-light p-2 rounded-full hover:bg-base-panel transition-colors"
+              >
+                <Mic size={18} />
+              </button>
+
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={`Message #${channel?.name || `channel-${channelId}`}...`}
+                className="flex-1 bg-base-panel border border-base-border rounded-full px-4 py-2 text-sm text-white outline-none focus:border-brand"
+              />
+              <button
+                type="submit"
+                className="bg-brand hover:bg-brand-dark text-white rounded-full p-2.5 transition-colors cursor-pointer"
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          </>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            {episodes.length === 0 && (
+              <div className="text-center py-16 text-gray-500 text-xs">
+                <Mic2 size={28} className="mx-auto mb-3 text-gray-600" />
+                No episodes published yet.
+                {canManage && " Publish your first one to build a real feed beyond live chat."}
+              </div>
+            )}
+            {episodes.map((ep) => (
+              <EpisodeCard
+                key={ep.id}
+                episode={ep}
+                isPlaying={playingEpisode?.id === ep.id}
+                onPlay={handlePlayEpisode}
+                isBookmarked={bookmarkedIds.has(ep.id)}
+                onToggleBookmark={handleToggleBookmark}
+                canDelete={canManage}
+                onDelete={handleDeleteEpisode}
+              />
+            ))}
+            <audio ref={audioRef} className="hidden" />
+          </div>
+        )}
       </div>
 
       {showDetails && (
@@ -288,6 +453,14 @@ export default function ChannelChat() {
           channelId={channelId}
           targetUser={reportTarget}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {showPublish && (
+        <PublishEpisodeModal
+          channelId={channelId}
+          onClose={() => setShowPublish(false)}
+          onPublished={(ep) => setEpisodes((prev) => [ep, ...prev])}
         />
       )}
 

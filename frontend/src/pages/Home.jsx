@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Compass, Sparkles } from 'lucide-react'
+import { io } from 'socket.io-client'
 import Sidebar from '../components/Sidebar.jsx'
 import ChannelCard from '../components/ChannelCard.jsx'
 import InvitationCard from '../components/InvitationCard.jsx'
 import AudioPlayerBar from '../components/AudioPlayerBar.jsx'
+import GlobalSearchBar from '../components/GlobalSearchBar.jsx'
+import NotificationBell from '../components/NotificationBell.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   getJoinedChannels,
@@ -28,6 +31,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [activeAudioStream, setActiveAudioStream] = useState(null)
   const navigate = useNavigate()
+  const socketRef = useRef(null)
+
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'] })
+    if (user?.id) socket.emit('join_user_room', { user_id: user.id })
+    socketRef.current = socket
+    return () => socket.disconnect()
+  }, [user?.id])
 
   const loadData = async () => {
     setLoading(true)
@@ -102,12 +114,16 @@ export default function Home() {
               Discover and join live audio channels across PodClub.
             </p>
           </div>
-          <button
-            onClick={() => navigate('/channel-management')}
-            className="btn-primary self-start sm:self-auto shadow-md shadow-brand/20"
-          >
-            + Create New Channel
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <GlobalSearchBar className="w-56 hidden sm:block" />
+            <NotificationBell socket={socketRef.current} />
+            <button
+              onClick={() => navigate('/channel-management')}
+              className="btn-primary shadow-md shadow-brand/20 whitespace-nowrap"
+            >
+              + Create New Channel
+            </button>
+          </div>
         </div>
 
         {invitations.length > 0 && (
