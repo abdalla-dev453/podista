@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db, socketio
 from app.models.message import Message
 from app.models.membership import Membership
+from app.models.reaction import Reaction
 
 messages_bp = Blueprint("messages", __name__)
 
@@ -52,8 +53,48 @@ def send_message(channel_id):
     return jsonify(payload), 201
 
 
+@messages_bp.post("/<int:message_id>/react")
+@jwt_required()
+def toggle_reaction(message_id):
+    """Toggle an emoji reaction on a message. Returns the aggregated reactions list."""
+    user_id = int(get_jwt_identity())
+    msg = Message.query.get_or_404(message_id)
+    if not _require_membership(user_id, msg.channel_id):
+        return jsonify({"error": "Not a member of this channel"}), 403
+    emoji = (request.get_json() or {}).get("emoji")
+    if not emoji:
+        return jsonify({"error": "emoji required"}), 400
+    existing = Reaction.query.filter_by(
+        message_id=message_id, user_id=user_id, emoji=emoji
+    ).first()
+    if existing:
+        db.session.delete(existing)
+    else:
+        db.session.add(Reaction(message_id=message_id, user_id=user_id, emoji=emoji))
+    db.session.commit()
+
+    payload = {"message_id": message_id, "reactions": _serialize_reactions(msg)}
+    socketio.emit("message_reaction", payload, room=f"channel_{msg.channel_id}")
+    return jsonify(payload)
+
+
+def _serialize_reactions(msg):
+    """Aggregate reactions as [{emoji, count, user_ids}] for the frontend."""
+    grouped = {}
+    for r in msg.reactions.order_by(Reaction.created_at).all():
+        g = grouped.setdefault(r.emoji, {"emoji": r.emoji, "user_ids": []})
+        g["user_ids"].append(r.user_id)
+    for g in grouped.values():
+        g["count"] = len(g["user_ids"])
+    return list(grouped.values())
+
 @socketio.on("join_channel")
 def handle_join_channel(data):
     from flask_socketio import join_room
-
     join_room(f"channel_{data.get('channel_id')}")
+
+@socketio.on("join_user_room")
+def handle_join_user_room(data):
+    """Personal room so notify() can push live notifications to this user."""
+    from flask_socketio import join_room
+    join_room(f"user_{data.get('user_id')}")

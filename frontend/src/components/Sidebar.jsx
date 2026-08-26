@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Home, PlusCircle, LayoutDashboard, Settings, Radio, LogOut, Menu, X, ShieldCheck } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import podistaLogo from '../assets/podista-logo.svg'
 import { useAuth } from '../context/AuthContext.jsx'
 import ProfileModal from './ProfileModal.jsx'
 
@@ -24,6 +25,7 @@ export default function Sidebar({ activeLabel, onGoLive }) {
         <div className="mb-6 px-2 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-brand-light flex items-center gap-2">
+              <img src={podistaLogo} alt="" className="w-5 h-5 inline-block" />
               PodClub
               {user?.is_platform_admin && (
                 <span className="text-[10px] bg-brand-light/20 text-brand-light px-2 py-0.5 rounded-full font-medium">

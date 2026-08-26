@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Compass, Sparkles } from 'lucide-react'
+import { Search, Compass, Mic2 } from 'lucide-react'
 import { io } from 'socket.io-client'
 import Sidebar from '../components/Sidebar.jsx'
 import ChannelCard from '../components/ChannelCard.jsx'
@@ -108,7 +108,7 @@ export default function Home() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               Welcome Back, {user?.display_name?.split(' ')[0] || ''}
-              <Sparkles size={20} className="text-brand-light animate-pulse" />
+              <Mic2 size={20} className="text-brand-light" />
             </h1>
             <p className="text-gray-500 text-xs md:text-sm">
               Discover and join live audio channels across PodClub.

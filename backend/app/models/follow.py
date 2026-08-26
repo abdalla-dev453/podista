@@ -12,3 +12,6 @@ class  Follow(db.Model):
     follower_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     followee_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    follower = db.relationship("User", foreign_keys=[follower_id])
+    followee = db.relationship("User", foreign_keys=[followee_id])

@@ -1,4 +1,4 @@
-import { Mic, Mic2, MessageSquare, Pin, Plus, Radio, Send, ShieldAlert, UserPlus, X } from "lucide-react";
+import { Mic2, MessageSquare, Pin, Plus, Radio, Send, ShieldAlert, UserPlus, X, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -96,7 +96,7 @@ export default function ChannelChat() {
       "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
     try {
       await sendMessage(channelId, {
-        body: "🎙 Shared a 15-second voice clip",
+        body: "Shared a 15-second voice clip",
         attachment_url: demoVoiceClip,
       });
       scrollToBottom();
@@ -265,7 +265,7 @@ export default function ChannelChat() {
                 const isAudioAttachment =
                   m.attachment_url?.endsWith(".mp3") ||
                   m.attachment_url?.includes("audio") ||
-                  m.body?.includes("🎙");
+                  m.body?.startsWith("Shared a 15-second voice clip");
 
                 return (
                   <div

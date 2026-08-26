@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="podg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c5cff"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+  </defs>
+  <!-- broadcast waves -->
+  <path d="M18 14a20 20 0 0 0 0 36" stroke="url(#podg)" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M46 14a20 20 0 0 1 0 36" stroke="url(#podg)" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- microphone -->
+  <rect x="25" y="12" width="14" height="26" rx="7" fill="url(#podg)"/>
+  <path d="M17 30a15 15 0 0 0 30 0" stroke="url(#podg)" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="32" y1="45" x2="32" y2="54" stroke="url(#podg)" stroke-width="4.5" stroke-linecap="round"/>
+</svg>

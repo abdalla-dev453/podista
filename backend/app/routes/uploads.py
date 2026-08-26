@@ -56,7 +56,7 @@ def upload_video():
     """Used for podcast episode audio files."""
     if "file" not in request.files:
         return jsonify({"error": "file is required"}), 400
-    url, err = _save(request.files["file"], "video", ALLOWED_AUDIO)
+    url, err = _save(request.files["file"], "video", ALLOWED_VIDEO)
     if err:
         return jsonify({"error": err[0]}), err[1]
     return jsonify({"url": url}), 201

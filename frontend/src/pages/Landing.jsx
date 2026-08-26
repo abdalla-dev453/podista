@@ -1,15 +1,7 @@
-import {
-  ArrowRight,
-  Mic2,
-  Radio,
-  Users,
-  Bell,
-  Compass,
-  Sparkles,
-  ShieldCheck,
-} from 'lucide-react'
+import { ArrowRight, Mic2, Radio, Users, Bell, Compass, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import heroImg from '../assets/hero.png'
+import heroImg from '../assets/pod.jpeg'
+import podistaLogo from '../assets/podista-logo.svg'
 
 const FEATURES = [
   {
@@ -56,8 +48,8 @@ export default function Landing() {
       {/* Nav */}
       <header className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-accent-teal flex items-center justify-center">
-            <Radio size={16} className="text-black" />
+          <div className="w-9 h-9 rounded-lg bg-base-card border-base-border flex items-center justify-center">
+            <img src={podistaLogo} alt="Podista logo" className="w-6 h-6" />
           </div>
           <span className="font-display font-bold text-lg">Podista</span>
         </div>
@@ -76,7 +68,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6 pt-12 pb-20 grid md:grid-cols-2 gap-10 items-center">
           <div className="animate-fade-in-up">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-brand/15 text-brand-light border border-brand/30 px-3 py-1 rounded-full mb-5">
-              <Sparkles size={12} /> Built for East African creators & beyond
+              <Mic2 size={12} /> Built for East African creators & beyond
             </span>
             <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight mb-5">
               Where podcasts <span className="text-gradient-brand">become communities</span>
